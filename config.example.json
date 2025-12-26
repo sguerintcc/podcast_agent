@@ -1,0 +1,12 @@
+{
+  "feed_urls": [
+    "https://www.youtube.com/feeds/videos.xml?channel_id=YOUR_CHANNEL_ID"
+  ],
+  "database_path": "podcasts.db",
+  "youtube_language": "en",
+  "llm": {
+    "provider": "echo",
+    "model": "gpt-4o-mini",
+    "system_prompt": "You are a helpful assistant summarizing podcast transcripts. Provide concise summaries and relevant tags."
+  }
+}

@@ -10,7 +10,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 # Replace this with your podcast feed URL (YouTube channel feeds are supported).
-FEED_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=YOUR_CHANNEL_ID"
+# Example: this channel mixes long-form podcast episodes with shorts.
+FEED_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCvxm0qTrGN_1LMYgUaftWyQ"
 
 
 def main() -> None:

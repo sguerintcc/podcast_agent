@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Iterable, List
 
 import feedparser
+import yt_dlp
 
 
 @dataclass
@@ -59,6 +61,78 @@ class RSSFeedMonitor:
         )
 
 
+class YouTubeChannelMonitor:
+    """Fetch episodes from a YouTube channel using yt-dlp.
+
+    This monitor uses yt-dlp so it can walk a channel's uploads playlist and
+    return the full video history without requiring YouTube Data API keys.
+    """
+
+    def __init__(self, *, user_agent: str = "podcast-agent/0.1", max_videos: int | None = None) -> None:
+        self._user_agent = user_agent
+        self._base_options: dict = {
+            "quiet": True,
+            "skip_download": True,
+            "noplaylist": False,
+            "lazy_playlist": False,
+            "cachedir": False,
+        }
+        # yt-dlp reads playlistend as the maximum number of entries to fetch.
+        if max_videos is not None:
+            self._base_options["playlistend"] = max_videos
+
+    def fetch_episodes(self, channel_url: str) -> List[Episode]:
+        options = {
+            **self._base_options,
+            "http_headers": {"User-Agent": self._user_agent},
+        }
+
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(channel_url, download=False)
+
+        if info is None:
+            return []
+
+        entries = info.get("entries") if isinstance(info, dict) else None
+        if entries is None:
+            entries = [info]
+
+        episodes: List[Episode] = []
+        for entry in entries:
+            if not entry:
+                continue
+
+            entry_dict = entry if isinstance(entry, dict) else {}
+
+            duration_seconds = entry_dict.get("duration")
+            published = _extract_published(entry_dict)
+
+            lookup = SimpleNamespace(
+                title=entry_dict.get("title", ""),
+                link=(entry_dict.get("webpage_url") or entry_dict.get("url") or ""),
+                summary=entry_dict.get("description", ""),
+            )
+
+            is_podcast = _looks_like_podcast(lookup, duration_seconds)
+            if not is_podcast:
+                continue
+
+            episode_id = str(entry_dict.get("id") or entry_dict.get("url"))
+            episodes.append(
+                Episode(
+                    feed_url=channel_url,
+                    episode_id=episode_id,
+                    title=entry_dict.get("title", ""),
+                    link=(entry_dict.get("webpage_url") or entry_dict.get("url") or ""),
+                    published=published,
+                    duration_seconds=duration_seconds,
+                    is_probable_podcast=is_podcast,
+                )
+            )
+
+        return episodes
+
+
 def _parse_duration(raw: object) -> int | None:
     """Return a duration in seconds if it can be parsed from RSS fields."""
 
@@ -101,6 +175,26 @@ def _parse_duration(raw: object) -> int | None:
                 for part in parts:
                     seconds = seconds * 60 + int(part)
                 return seconds
+    return None
+
+
+def _extract_published(entry: dict) -> dt.datetime | None:
+    """Parse published timestamp from yt-dlp entries when available."""
+
+    timestamp = entry.get("timestamp")
+    if timestamp is not None:
+        try:
+            return dt.datetime.fromtimestamp(float(timestamp), tz=dt.timezone.utc)
+        except (OverflowError, ValueError, OSError):
+            return None
+
+    upload_date = entry.get("upload_date")
+    if isinstance(upload_date, str) and len(upload_date) == 8 and upload_date.isdigit():
+        try:
+            return dt.datetime.strptime(upload_date, "%Y%m%d").replace(tzinfo=dt.timezone.utc)
+        except ValueError:
+            return None
+
     return None
 
 

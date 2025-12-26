@@ -49,6 +49,9 @@ Minimal, runnable examples are provided in the `examples/` directory to demonstr
 - `examples/transcript_fetch.py`: Retrieve a transcript for a YouTube video using `YouTubeTranscriptClient`.
 - `examples/summarize_transcript.py`: Summarize a transcript with the echo LLM client.
 - `examples/full_pipeline.py`: Show how to wire the pipeline with static clients for offline testing.
+- `examples/youtube_channel_monitor.py`: Crawl a YouTube channel's upload history using `YouTubeChannelMonitor`.
+
+Use `YouTubeChannelMonitor` when you want to crawl the full upload history of a YouTube channel without YouTube Data API keys.
 
 Run any example with Python, optionally adjusting the constants in each file to match your feeds, video URLs, or sample data:
 ```bash
